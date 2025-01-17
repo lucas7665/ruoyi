@@ -8,11 +8,11 @@ import org.springframework.stereotype.Service;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.File;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Paths;
 
 @Slf4j
 @Service
@@ -21,24 +21,31 @@ public class PythonService {
     @Value("${upload.path}")
     private String uploadPath;
     
-    private String getAbsolutePath(String scriptName) {
-        try {
-            return new File(getClass().getResource("/python/" + scriptName).getFile())
-                .getAbsolutePath();
-        } catch (Exception e) {
-            log.error("获取Python脚本路径失败: {}", scriptName, e);
-            throw new RuntimeException("Python脚本不存在: " + scriptName);
-        }
+    @Value("${python.script.path}")
+    private String scriptPath;
+    
+    private String getProjectPath() {
+        return System.getProperty("user.dir");
+    }
+    
+    private String getPythonPath() {
+        return Paths.get(getProjectPath(), "venv", "bin", "python3").toString();
     }
     
     public String executeOcrScript(String fileName) {
         try {
             log.info("执行OCR脚本, 文件路径: {}", fileName);
             
+            String projectPath = getProjectPath();
+            String fullScriptPath = Paths.get(projectPath, scriptPath, "ocr_service.py").toString();
+            String fullFilePath = Paths.get(projectPath, uploadPath, fileName).toString();
+            
+            log.info("脚本路径: {}, 文件路径: {}", fullScriptPath, fullFilePath);
+            
             ProcessBuilder processBuilder = new ProcessBuilder(
-                "python",
-                "src/main/resources/python/ocr_service.py",
-                uploadPath + "/" + fileName
+                getPythonPath(),
+                fullScriptPath,
+                fullFilePath
             );
             
             Process process = processBuilder.start();
@@ -102,12 +109,13 @@ public class PythonService {
     
     public String executeAnalysisScript(String text) {
         try {
-            String scriptPath = getAbsolutePath("analysis.py");
-            log.info("执行分析脚本: {}", scriptPath);
+            String projectPath = getProjectPath();
+            String fullScriptPath = Paths.get(projectPath, scriptPath, "analysis.py").toString();
+            log.info("执行分析脚本: {}", fullScriptPath);
             
             ProcessBuilder processBuilder = new ProcessBuilder(
-                "python",
-                "src/main/resources/python/analysis.py"
+                getPythonPath(),
+                fullScriptPath
             );
             
             processBuilder.redirectErrorStream(true);

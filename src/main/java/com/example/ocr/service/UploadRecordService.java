@@ -7,13 +7,18 @@ import com.example.ocr.entity.AnalysisResult;
 import com.example.ocr.mapper.UploadRecordMapper;
 import com.example.ocr.mapper.OcrResultMapper;
 import com.example.ocr.mapper.AnalysisResultMapper;
+import com.example.ocr.config.FileStorageConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -36,38 +41,39 @@ public class UploadRecordService {
     @Autowired
     private PythonService pythonService;
     
-    @Value("${upload.path}")
-    private String uploadPath;
+    @Autowired
+    private FileStorageConfig fileStorageConfig;
     
-    public UploadRecord processFile(MultipartFile file) {
-        try {
-            log.info("开始保存文件: {}", file.getOriginalFilename());
-            
-            // 保存文件
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            String filePath = uploadPath + "/" + fileName;
-            log.info("文件将保存到: {}", filePath);
-            
-            File dest = new File(filePath);
-            file.transferTo(dest);
-            log.info("文件保存成功");
-            
-            // 保存记录，状态设为待识别(0)
-            UploadRecord record = new UploadRecord();
-            record.setFileName(file.getOriginalFilename());
-            record.setFileSize(file.getSize());
-            record.setFileType(file.getContentType());
-            record.setUploadTime(LocalDateTime.now());
-            record.setStatus(0); // 待识别
-            record.setCreateTime(LocalDateTime.now());
-            record.setUpdateTime(LocalDateTime.now());
-            
-            uploadRecordMapper.insert(record);
-            return record;
-        } catch (Exception e) {
-            log.error("处理文件失败: {}", e.getMessage(), e);
-            throw new RuntimeException("处理文件失败", e);
+    public UploadRecord processFile(MultipartFile file) throws IOException {
+        // 确保上传目录存在
+        File uploadDir = new File(fileStorageConfig.getPath());
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
         }
+
+        // 生成文件名
+        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+        
+        // 使用相对路径
+        Path filePath = Paths.get(fileStorageConfig.getPath(), fileName).toAbsolutePath().normalize();
+        
+        log.info("文件将保存到: {}", filePath);
+        
+        // 保存文件
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+        
+        // 创建并保存记录
+        UploadRecord record = new UploadRecord();
+        record.setFileName(file.getOriginalFilename());
+        record.setFileSize(file.getSize());
+        record.setFileType(file.getContentType());
+        record.setUploadTime(LocalDateTime.now());
+        record.setStatus(0); // 待识别
+        record.setCreateTime(LocalDateTime.now());
+        record.setUpdateTime(LocalDateTime.now());
+        
+        uploadRecordMapper.insert(record);
+        return record;
     }
     
     // OCR识别处理
@@ -80,7 +86,7 @@ public class UploadRecordService {
                 }
                 
                 // 获取文件的完整路径
-                File[] files = new File(uploadPath).listFiles((dir, name) -> 
+                File[] files = new File(fileStorageConfig.getPath()).listFiles((dir, name) -> 
                     name.endsWith("_" + record.getFileName()));
                 
                 if (files == null || files.length == 0) {
