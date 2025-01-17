@@ -65,7 +65,11 @@ uploads/
 *.docx
 
 # Python
+venv/
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
 *.py[cod]
 *$py.class
 .Python
@@ -93,4 +97,25 @@ wheels/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Java
+target/
+*.jar
+*.war
+
+# Logs
+logs/
+*.log
+
+# Uploads
+uploads/
+
+# Config
+application-*.properties
+!application.properties 

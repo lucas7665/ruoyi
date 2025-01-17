@@ -1,5 +1,0 @@
-com\example\ocr\OcrApplication.class
-com\example\ocr\entity\UploadRecord.class
-com\example\ocr\controller\UploadRecordController.class
-com\example\ocr\service\UploadRecordService.class
-com\example\ocr\repository\UploadRecordRepository.class
