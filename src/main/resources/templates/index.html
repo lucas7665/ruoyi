@@ -1,0 +1,523 @@
+<!-- src/main/resources/templates/upload/list.html -->
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医疗质控系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script th:inline="javascript">
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    primary: '#2563eb',
+                    secondary: '#64748b'
+                },
+                borderRadius: {
+                    'none': '0px',
+                    'sm': '2px',
+                    DEFAULT: '4px',
+                    'md': '8px',
+                    'lg': '12px',
+                    'xl': '16px',
+                    '2xl': '20px',
+                    '3xl': '24px',
+                    'full': '9999px',
+                    'button': '4px'
+                }
+            }
+        }
+    }
+    </script>
+    <style>
+    body {
+        min-height: 1024px;
+    }
+    .sidebar {
+        width: 240px;
+        min-height: calc(100vh - 64px);
+    }
+    .main-content {
+        width: calc(100% - 240px);
+    }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 头部导航 -->
+    <header class="h-16 bg-white border-b border-gray-200">
+        <div class="flex items-center justify-between h-full px-6">
+            <div class="flex items-center space-x-8">
+                <h1 class="text-xl font-['Pacifico']">医疗质控</h1>
+                <div class="relative">
+                    <input type="text" placeholder="搜索分析结果..." class="w-96 h-10 pl-10 pr-4 text-sm bg-gray-50 border border-gray-200 rounded-button focus:outline-none focus:border-primary">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="text-gray-600 hover:text-primary"><i class="fas fa-bell"></i></button>
+                <button class="text-gray-600 hover:text-primary"><i class="fas fa-cog"></i></button>
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <span class="text-sm text-gray-700" th:text="${session.userName ?: '未登录'}">张医生</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex">
+        <!-- 侧边栏 -->
+        <aside class="sidebar bg-gray-800 text-white">
+            <nav class="py-4">
+                <div class="px-4 py-2 mb-4">
+                    <h2 class="text-sm font-medium text-gray-400">系统导航</h2>
+                </div>
+                <a href="/" class="flex items-center px-4 py-3 hover:bg-primary/90">
+                    <i class="fas fa-home w-5 h-5"></i>
+                    <span class="ml-3">首页</span>
+                </a>
+                <a href="/upload/list" class="flex items-center px-4 py-3 bg-primary">
+                    <i class="fas fa-chart-line w-5 h-5"></i>
+                    <span class="ml-3">医疗质控系统</span>
+                </a>
+                <a href="#" class="flex items-center px-4 py-3 text-gray-400 cursor-not-allowed">
+                    <i class="fas fa-user-nurse w-5 h-5"></i>
+                    <span class="ml-3">护理管理系统</span>
+                </a>
+                <a href="#" class="flex items-center px-4 py-3 text-gray-400 cursor-not-allowed">
+                    <i class="fas fa-robot w-5 h-5"></i>
+                    <span class="ml-3">医保智能助手</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- 主要内容区 -->
+        <main class="main-content p-6">
+            <div class="mb-6">
+                <h2 class="text-xl font-medium text-gray-800">医疗文档分析</h2>
+                <div class="text-sm text-gray-500 mt-1">首页 / 医疗质控系统 / 文档分析</div>
+            </div>
+
+            <!-- 上传和分析区域 -->
+            <div class="grid grid-cols-2 gap-6 mb-6">
+                <!-- 文件上传区域 -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div id="uploadArea" 
+                         class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer"
+                         onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" class="hidden" accept=".pdf,.png,.jpg,.jpeg">
+                        <div class="space-y-2">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
+                            <p class="text-sm text-gray-500">点击或拖拽文件到这里上传</p>
+                            <p class="text-xs text-gray-400">支持 PDF、PNG、JPG 格式</p>
+                        </div>
+                    </div>
+                    <!-- 添加上传状态显示 -->
+                    <div id="uploadStatus" class="mt-4 text-center text-sm"></div>
+                    <!-- 进度条 -->
+                    <div id="progressContainer" class="mt-4 hidden">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progressBar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分析按钮区域 -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="p-8 text-center h-full flex flex-col items-center justify-center">
+                        <i class="fas fa-robot text-gray-400 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-medium text-gray-800 mb-2">智能分析</h3>
+                        <p class="text-sm text-gray-500 mb-4">上传文件后即可开始分析</p>
+                        <button id="analyzeButton" 
+                                class="bg-gray-300 text-gray-600 px-6 py-2 rounded-button cursor-not-allowed"
+                                disabled>
+                            开始智能分析
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分析结果区域 -->
+            <div id="analysisResult" class="bg-white rounded-lg shadow-sm p-6 hidden">
+                <div class="space-y-4">
+                    <h3 class="text-lg font-medium text-gray-800">智能分析结果</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <pre id="analysisContent" class="whitespace-pre-wrap text-sm text-gray-600"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 历史记录表格 -->
+            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-medium text-gray-800">处理记录</h3>
+                        <div class="space-x-2">
+                            <button id="batchOcrBtn" 
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    disabled>
+                                开始批量识别
+                            </button>
+                            <button id="batchAnalyzeBtn" 
+                                    class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    disabled>
+                                开始智能分析
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="w-12 py-3 px-4">
+                                <input type="checkbox" id="selectAll" class="rounded border-gray-300">
+                            </th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500">文件名</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500">上传时间</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500">状态</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500">分析结果</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultContent" class="divide-y divide-gray-200">
+                        <!-- 动态插入的记录 -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- 隐藏的数据存储 -->
+    <div id="ocrData" class="hidden"></div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const analyzeButton = document.getElementById('analyzeButton');
+            const resultContent = document.getElementById('resultContent');
+            const analysisResult = document.getElementById('analysisResult');
+            const analysisContent = document.getElementById('analysisContent');
+
+            // 拖拽上传
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('border-primary');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('border-primary');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('border-primary');
+                const file = e.dataTransfer.files[0];
+                handleFile(file);
+            });
+
+            // 文件选择
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                handleFile(file);
+            });
+
+            // 文件处理
+            async function handleFile(file) {
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const uploadStatus = document.getElementById('uploadStatus');
+                uploadStatus.textContent = '正在上传...';
+                
+                try {
+                    const response = await fetch('/api/ocr/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    console.log('Response status:', response.status);
+                    const responseText = await response.text();
+                    console.log('Response text:', responseText);
+                    
+                    if (!response.ok) {
+                        throw new Error(`上传失败: ${responseText}`);
+                    }
+                    
+                    const data = JSON.parse(responseText);
+                    if (!data.success) {
+                        throw new Error(data.error || '处理失败');
+                    }
+                    
+                    uploadStatus.textContent = '上传成功';
+                    uploadStatus.className = 'mt-4 text-center text-sm text-green-600';
+                    return data;
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    if (uploadStatus) {
+                        uploadStatus.textContent = '上传失败: ' + error.message;
+                        uploadStatus.className = 'mt-4 text-center text-sm text-red-600';
+                    }
+                    throw error;
+                }
+            }
+
+            // 分析按钮点击事件
+            analyzeButton.addEventListener('click', async () => {
+                try {
+                    analyzeButton.disabled = true;
+                    const ocrData = document.getElementById('ocrData');
+                    if (!ocrData || !ocrData.textContent) {
+                        throw new Error('没有找到OCR识别结果');
+                    }
+
+                    const data = JSON.parse(ocrData.textContent);
+                    const response = await fetch(`/api/ocr/analyze/${data.id}`, {
+                        method: 'POST'
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        if (result.success) {
+                            analysisContent.textContent = result.analysis;
+                            analysisResult.style.display = 'block';
+
+                            // 更新表格状态
+                            const statusCell = resultContent.querySelector('tr td:nth-child(3)');
+                            const findingsCell = resultContent.querySelector('tr td:nth-child(4)');
+                            if (statusCell && findingsCell) {
+                                statusCell.innerHTML = `
+                                    <span class="px-2 py-1 text-xs font-medium text-green-700 bg-green-50 rounded-full">分析完成</span>
+                                `;
+                                findingsCell.textContent = '已完成分析';
+                            }
+                        } else {
+                            throw new Error(result.error || '分析失败');
+                        }
+                    } else {
+                        throw new Error('分析请求失败');
+                    }
+                } catch (error) {
+                    console.error('分析失败:', error);
+                    alert('分析失败: ' + error.message);
+                } finally {
+                    analyzeButton.disabled = false;
+                }
+            });
+
+            // 加载历史记录
+            loadRecentRecords();
+        });
+
+        // 加载最近记录
+        async function loadRecentRecords() {
+            try {
+                const response = await fetch('/api/ocr/recent');
+                const records = await response.json();
+                
+                const resultContent = document.getElementById('resultContent');
+                resultContent.innerHTML = records.map(record => `
+                    <tr class="border-b border-gray-200">
+                        <td class="py-4 px-4">
+                            <input type="checkbox" class="record-checkbox rounded border-gray-300" 
+                                   data-id="${record.id}"
+                                   data-status="${record.status}"
+                                   ${record.status === 2 ? 'disabled' : ''}>
+                        </td>
+                        <td class="py-4 px-4 text-sm text-gray-800">${record.fileName}</td>
+                        <td class="py-4 px-4 text-sm text-gray-600">${new Date(record.uploadTime).toLocaleString()}</td>
+                        <td class="py-4 px-4">
+                            <span class="px-2 py-1 text-xs font-medium rounded-full
+                                ${record.status === 0 ? 'text-yellow-700 bg-yellow-50' : 
+                                  record.status === 1 ? 'text-blue-700 bg-blue-50' :
+                                  record.status === 2 ? 'text-green-700 bg-green-50' : 
+                                  'text-gray-700 bg-gray-50'} ">
+                                ${record.status === 0 ? '待识别' : 
+                                  record.status === 1 ? '待分析' :
+                                  record.status === 2 ? '已分析' : '已删除'}
+                            </span>
+                        </td>
+                        <td class="py-4 px-4 text-sm text-gray-600">
+                            ${record.status === 2 ? '已完成分析' : '待分析'}
+                        </td>
+                        <td class="py-4 px-4">
+                            <button class="text-primary hover:text-primary/80 text-sm mr-2" 
+                                    onclick="showDetails('${record.id}')">
+                                查看详情
+                            </button>
+                            <button class="text-red-600 hover:text-red-700 text-sm"
+                                    onclick="deleteRecord('${record.id}')">
+                                删除
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                setupCheckboxHandlers();
+            } catch (error) {
+                console.error('加载历史记录失败:', error);
+            }
+        }
+
+        // 设置复选框处理程序
+        function setupCheckboxHandlers() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.record-checkbox');
+
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => {
+                    if (!cb.disabled) {
+                        cb.checked = this.checked;
+                    }
+                });
+                updateBatchButtons();
+            });
+
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateBatchButtons);
+            });
+        }
+
+        // 更新按钮状态
+        function updateBatchButtons() {
+            const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+            const batchOcrBtn = document.getElementById('batchOcrBtn');
+            const batchAnalyzeBtn = document.getElementById('batchAnalyzeBtn');
+            
+            // 检查是否有选中的记录
+            if (checkedBoxes.length === 0) {
+                batchOcrBtn.disabled = true;
+                batchAnalyzeBtn.disabled = true;
+                return;
+            }
+            
+            // 检查选中记录的状态
+            const hasUnrecognized = Array.from(checkedBoxes).some(cb => {
+                const status = parseInt(cb.dataset.status);
+                return status === 0; // 待识别状态
+            });
+            
+            const hasUnanalyzed = Array.from(checkedBoxes).some(cb => {
+                const status = parseInt(cb.dataset.status);
+                return status === 1; // 待分析状态
+            });
+            
+            batchOcrBtn.disabled = !hasUnrecognized;
+            batchAnalyzeBtn.disabled = !hasUnanalyzed;
+        }
+        
+        // 批量识别处理
+        document.getElementById('batchOcrBtn').addEventListener('click', async () => {
+            const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+            const ids = Array.from(checkedBoxes)
+                .filter(cb => parseInt(cb.dataset.status) === 0)
+                .map(cb => cb.dataset.id);
+            
+            if (ids.length === 0) return;
+            
+            try {
+                const response = await fetch('/api/ocr/recognize/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ids })
+                });
+
+                if (!response.ok) {
+                    throw new Error('批量识别请求失败');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('批量识别任务已提交');
+                    loadRecentRecords(); // 刷新列表
+                } else {
+                    throw new Error(result.error || '批量识别失败');
+                }
+            } catch (error) {
+                console.error('批量识别失败:', error);
+                alert('批量识别失败: ' + error.message);
+            }
+        });
+
+        // 批量分析处理
+        document.getElementById('batchAnalyzeBtn').addEventListener('click', async () => {
+            const checkedBoxes = document.querySelectorAll('.record-checkbox:checked');
+            const ids = Array.from(checkedBoxes)
+                .filter(cb => parseInt(cb.dataset.status) === 1)  // 只处理待分析状态的记录
+                .map(cb => cb.dataset.id);
+            
+            if (ids.length === 0) return;
+            
+            try {
+                const response = await fetch('/api/ocr/analyze/batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ids })
+                });
+
+                if (!response.ok) {
+                    throw new Error('批量分析请求失败');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('批量分析任务已提交');
+                    loadRecentRecords(); // 刷新列表
+                } else {
+                    throw new Error(result.error || '批量分析失败');
+                }
+            } catch (error) {
+                console.error('批量分析失败:', error);
+                alert('批量分析失败: ' + error.message);
+            }
+        });
+
+        // 查看详情
+        function showDetails(id) {
+            // 实现查看详情的逻辑
+            console.log('查看详情:', id);
+        }
+
+        async function deleteRecord(id) {
+            if (!confirm('确定要删除这条记录吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/ocr/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    throw new Error('删除请求失败');
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    alert('删除成功');
+                    loadRecentRecords(); // 刷新列表
+                } else {
+                    throw new Error(result.error || '删除失败');
+                }
+            } catch (error) {
+                console.error('删除失败:', error);
+                alert('删除失败: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

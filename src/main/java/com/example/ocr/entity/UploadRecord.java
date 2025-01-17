@@ -14,4 +14,6 @@ public class UploadRecord {
     private Integer status = 1;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    private String ocrResult;
+    private String analysisResult;
 } 
