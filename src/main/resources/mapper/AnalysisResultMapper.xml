@@ -9,4 +9,8 @@
     <delete id="deleteByRecordId">
         DELETE FROM analysis_result WHERE record_id = #{recordId}
     </delete>
+    
+    <select id="selectByRecordId" resultType="com.example.ocr.entity.AnalysisResult">
+        SELECT * FROM analysis_result WHERE record_id = #{recordId}
+    </select>
 </mapper> 

@@ -46,6 +46,8 @@
         width: calc(100% - 240px);
     }
     </style>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
     <!-- 头部导航 -->
@@ -195,6 +197,35 @@
 
     <!-- 隐藏的数据存储 -->
     <div id="ocrData" class="hidden"></div>
+
+    <!-- 添加模态框 -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">记录详情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <h6>基本信息</h6>
+                        <p>文件名：<span id="detail-filename"></span></p>
+                        <p>上传时间：<span id="detail-uploadtime"></span></p>
+                        <p>状态：<span id="detail-status"></span></p>
+                    </div>
+                    <div class="mb-3">
+                        <h6>分析结果</h6>
+                        <div id="detail-analysis" class="border p-3 bg-light">
+                            <pre class="mb-0"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script th:inline="javascript">
         document.addEventListener('DOMContentLoaded', function() {
@@ -352,7 +383,7 @@
                         </td>
                         <td class="py-4 px-4">
                             <button class="text-primary hover:text-primary/80 text-sm mr-2" 
-                                    onclick="showDetails('${record.id}')">
+                                    onclick="showDetail('${record.id}')">
                                 查看详情
                             </button>
                             <button class="text-red-600 hover:text-red-700 text-sm"
@@ -487,9 +518,51 @@
         });
 
         // 查看详情
-        function showDetails(id) {
-            // 实现查看详情的逻辑
-            console.log('查看详情:', id);
+        function showDetail(id) {
+            fetch(`/api/ocr/record/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data || !data.record) {
+                        throw new Error('无效的响应数据');
+                    }
+                    const record = data.record;
+                    const analysisResult = data.analysisResult;
+                    
+                    // 更新基本信息
+                    document.getElementById('detail-filename').textContent = record.fileName;
+                    document.getElementById('detail-uploadtime').textContent = 
+                        new Date(record.uploadTime).toLocaleString();
+                    document.getElementById('detail-status').textContent = 
+                        getStatusText(record.status);
+                    
+                    // 更新分析结果
+                    const analysisDiv = document.getElementById('detail-analysis');
+                    analysisDiv.style.display = 'block';
+                    if (analysisResult && analysisResult.modelAnswer) {
+                        analysisDiv.querySelector('pre').textContent = 
+                            analysisResult.modelAnswer;
+                    } else {
+                        analysisDiv.querySelector('pre').textContent = '暂无分析结果';
+                    }
+                    
+                    // 显示模态框
+                    const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+                    detailModal.show();
+                })
+                .catch(error => {
+                    console.error('获取详情失败:', error);
+                    alert('获取详情失败: ' + error.message);
+                });
+        }
+
+        function getStatusText(status) {
+            switch (status) {
+                case 0: return '待识别';
+                case 1: return '待分析';
+                case 2: return '已分析';
+                case -1: return '已删除';
+                default: return '未知状态';
+            }
         }
 
         async function deleteRecord(id) {

@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Arrays;
+import java.util.Collections;
+import org.springframework.http.HttpStatus;
 
 @Slf4j
 @RestController
@@ -137,6 +139,22 @@ public class OcrController {
             response.put("success", false);
             response.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    @GetMapping("/record/{id}")
+    @ResponseBody
+    public ResponseEntity<?> getRecordDetail(@PathVariable Long id) {
+        try {
+            Map<String, Object> detail = uploadRecordService.getRecordDetail(id);
+            if (detail == null || !detail.containsKey("record")) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(detail);
+        } catch (Exception e) {
+            log.error("获取记录详情失败", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
         }
     }
 }

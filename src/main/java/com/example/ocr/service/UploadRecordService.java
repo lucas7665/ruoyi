@@ -17,6 +17,8 @@ import java.io.File;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
 
 @Slf4j
 @Service
@@ -202,5 +204,30 @@ public class UploadRecordService {
     
     public List<UploadRecord> getRecentRecords(int limit) {
         return uploadRecordMapper.selectRecentRecords(limit);
+    }
+    
+    public Map<String, Object> getRecordDetail(Long id) {
+        Map<String, Object> detail = new HashMap<>();
+        
+        // 获取上传记录
+        UploadRecord record = uploadRecordMapper.selectById(id);
+        if (record == null) {
+            return null;
+        }
+        detail.put("record", record);
+        
+        // 获取OCR结果
+        OcrResult ocrResult = ocrResultMapper.selectByRecordId(id);
+        if (ocrResult != null) {
+            detail.put("ocrResult", ocrResult);
+        }
+        
+        // 获取分析结果
+        AnalysisResult analysisResult = analysisResultMapper.selectByRecordId(id);
+        if (analysisResult != null) {
+            detail.put("analysisResult", analysisResult);
+        }
+        
+        return detail;
     }
 }

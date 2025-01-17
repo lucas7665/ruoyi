@@ -7,4 +7,5 @@ import org.apache.ibatis.annotations.Mapper;
 public interface AnalysisResultMapper {
     int insert(AnalysisResult record);
     int deleteByRecordId(Long recordId);
+    AnalysisResult selectByRecordId(Long recordId);
 } 
