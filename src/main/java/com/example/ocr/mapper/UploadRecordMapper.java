@@ -22,4 +22,7 @@ public interface UploadRecordMapper {
     
     @Select("SELECT * FROM upload_record WHERE status != -1 ORDER BY upload_time DESC LIMIT #{limit}")
     List<UploadRecord> selectRecentRecords(int limit);
+    
+    @Select("SELECT COUNT(*) FROM upload_record WHERE file_name = #{fileName} AND status != -1")
+    int countByFileName(String fileName);
 }

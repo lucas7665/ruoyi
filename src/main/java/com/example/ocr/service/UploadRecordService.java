@@ -44,7 +44,17 @@ public class UploadRecordService {
     @Autowired
     private FileStorageConfig fileStorageConfig;
     
+    // 添加检查文件是否存在的方法
+    public boolean isFileExists(String fileName) {
+        return uploadRecordMapper.countByFileName(fileName) > 0;
+    }
+    
     public UploadRecord processFile(MultipartFile file) throws IOException {
+        // 先检查文件是否已存在
+        if (isFileExists(file.getOriginalFilename())) {
+            throw new RuntimeException("文件已经上传过，请换个文件重新尝试");
+        }
+        
         // 确保上传目录存在
         File uploadDir = new File(fileStorageConfig.getPath());
         if (!uploadDir.exists()) {

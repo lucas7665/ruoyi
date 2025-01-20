@@ -259,37 +259,54 @@
                 formData.append('file', file);
                 
                 const uploadStatus = document.getElementById('uploadStatus');
-                uploadStatus.textContent = '正在上传...';
+                const progressContainer = document.getElementById('progressContainer');
+                const progressBar = document.getElementById('progressBar');
                 
                 try {
+                    progressContainer.classList.remove('hidden');
+                    uploadStatus.textContent = '正在上传...';
+                    uploadStatus.className = 'mt-4 text-center text-sm text-blue-600';
+                    
                     const response = await fetch('/api/ocr/upload', {
                         method: 'POST',
                         body: formData
                     });
                     
-                    console.log('Response status:', response.status);
-                    const responseText = await response.text();
-                    console.log('Response text:', responseText);
+                    const data = await response.json();
                     
                     if (!response.ok) {
-                        throw new Error(`上传失败: ${responseText}`);
+                        throw new Error(data.error || '上传失败');
                     }
                     
-                    const data = JSON.parse(responseText);
                     if (!data.success) {
                         throw new Error(data.error || '处理失败');
                     }
                     
+                    // 更新状态
                     uploadStatus.textContent = '上传成功';
                     uploadStatus.className = 'mt-4 text-center text-sm text-green-600';
-                    return data;
+                    progressBar.style.width = '100%';
+                    
+                    // 立即刷新记录列表
+                    await loadRecentRecords();
+                    
+                    // 清空文件输入框，为下次上传做准备
+                    document.getElementById('fileInput').value = '';
+                    
+                    // 3秒后隐藏进度条
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                        progressBar.style.width = '0%';
+                    }, 3000);
+                    
                 } catch (error) {
                     console.error('Upload error:', error);
-                    if (uploadStatus) {
-                        uploadStatus.textContent = '上传失败: ' + error.message;
-                        uploadStatus.className = 'mt-4 text-center text-sm text-red-600';
-                    }
-                    throw error;
+                    uploadStatus.textContent = error.message;
+                    uploadStatus.className = 'mt-4 text-center text-sm text-red-600';
+                    progressContainer.classList.add('hidden');
+                    
+                    // 清空文件输入框，允许重新选择
+                    document.getElementById('fileInput').value = '';
                 }
             }
 
@@ -345,7 +362,7 @@
                 
                 const resultContent = document.getElementById('resultContent');
                 resultContent.innerHTML = records.map(record => `
-                    <tr class="border-b border-gray-200">
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
                         <td class="py-4 px-4">
                             <input type="checkbox" class="record-checkbox rounded border-gray-300" 
                                    data-id="${record.id}"
@@ -380,6 +397,7 @@
                 `).join('');
 
                 setupCheckboxHandlers();
+                updateBatchButtons();  // 更新批量处理按钮状态
             } catch (error) {
                 console.error('加载历史记录失败:', error);
             }
