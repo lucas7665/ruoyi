@@ -12,29 +12,28 @@ import org.springframework.web.bind.annotation.*;
 public class UploadRecordController {
     
     @Autowired
-    private UploadRecordService1 UploadRecordService1;
+    private UploadRecordService1 uploadRecordService1;
     
-    @GetMapping
+    @GetMapping("/list")
     public String list(Model model) {
-        model.addAttribute("records", UploadRecordService1.findAll());
-        return "upload/list";
+        return "medical_control.html";
     }
     
     @PostMapping
     public String save(UploadRecord record) {
-        UploadRecordService1.save(record);
+        uploadRecordService1.save(record);
         return "redirect:/upload";
     }
     
     @GetMapping("/delete/{id}")
     public String delete(@PathVariable Long id) {
-        UploadRecordService1.delete(id);
+        uploadRecordService1.delete(id);
         return "redirect:/upload";
     }
     
     @PostMapping("/update")
     public String update(UploadRecord record) {
-        UploadRecordService1.update(record);
+        uploadRecordService1.update(record);
         return "redirect:/upload";
     }
 } 
