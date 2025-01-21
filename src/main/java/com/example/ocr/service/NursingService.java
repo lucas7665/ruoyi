@@ -18,8 +18,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.JsonNode;
 
 @Slf4j
 @Service
@@ -184,36 +182,6 @@ public class NursingService {
         }
         
         return output.substring(start, end).trim();
-    }
-
-    private String extractJsonFromOutput(String output) {
-        // 查找包含API响应的JSON对象
-        int jsonStart = output.indexOf("{\"output\":");
-        if (jsonStart == -1) {
-            // 尝试查找最后一个JSON对象
-            jsonStart = output.lastIndexOf("{\"summary\":");
-            if (jsonStart == -1) {
-                throw new RuntimeException("无法在输出中找到JSON数据");
-            }
-        }
-        
-        // 找到JSON对象的结束位置
-        int bracketCount = 1;
-        int jsonEnd = jsonStart + 1;
-        while (bracketCount > 0 && jsonEnd < output.length()) {
-            char c = output.charAt(jsonEnd);
-            if (c == '{') bracketCount++;
-            if (c == '}') bracketCount--;
-            jsonEnd++;
-        }
-        
-        if (bracketCount > 0) {
-            throw new RuntimeException("JSON格式不完整");
-        }
-        
-        String jsonStr = output.substring(jsonStart, jsonEnd);
-        log.debug("提取的JSON: {}", jsonStr);
-        return jsonStr;
     }
 
     public Map<String, Object> getRecordDetail(Long id) {

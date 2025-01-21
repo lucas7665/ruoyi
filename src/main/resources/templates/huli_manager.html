@@ -7,6 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
     tailwind.config = {
         theme: {
@@ -49,6 +50,7 @@
             }
         ]
     }
+    window.jsPDF = window.jspdf.jsPDF;
     </script>
     <style>
         .main-content {
@@ -163,6 +165,41 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 页码选择弹框 -->
+            <div id="pageRangeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+                <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                    <div class="flex justify-between items-center pb-3">
+                        <h3 class="text-lg font-medium">选择页码范围</h3>
+                        <button onclick="closePageRangeModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="mt-4">
+                        <div class="space-y-4">
+                            <div class="flex items-center space-x-4">
+                                <label class="text-sm font-medium text-gray-700">起始页：</label>
+                                <input type="number" id="pageRangeStart" class="rounded border-gray-300 w-20" min="1" value="1">
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <label class="text-sm font-medium text-gray-700">结束页：</label>
+                                <input type="number" id="pageRangeEnd" class="rounded border-gray-300 w-20" min="1">
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                总页数：<span id="pdfTotalPages">0</span> 页
+                            </div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button onclick="closePageRangeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                                取消
+                            </button>
+                            <button onclick="confirmPageRange()" class="btn-primary">
+                                确定
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -227,6 +264,10 @@
             });
         }
 
+        // 当前处理的文件和总页数
+        let currentFile = null;
+        let currentTotalPages = 0;
+        
         // 处理文件上传
         async function handleFileUpload(file) {
             if (!file.name.toLowerCase().endsWith('.pdf')) {
@@ -238,36 +279,13 @@
                 // 加载 PDF 并获取页数
                 const arrayBuffer = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                const totalPages = pdf.numPages;
-
-                // 显示页面选择器
-                document.getElementById('pageSelector').classList.remove('hidden');
-                document.getElementById('totalPages').textContent = totalPages;
-                document.getElementById('endPage').value = totalPages;
-
-                // 上传文件
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('startPage', document.getElementById('startPage').value);
-                formData.append('endPage', document.getElementById('endPage').value);
-                formData.append('totalPages', totalPages);
-
-                const response = await fetch('/nursing/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error('上传失败');
-                }
-
-                const result = await response.json();
-                if (result.success) {
-                    alert('上传成功');
-                    await loadRecentRecords();
-                } else {
-                    throw new Error(result.error || '上传失败');
-                }
+                currentFile = file;
+                currentTotalPages = pdf.numPages;
+                
+                // 显示页码选择弹框
+                document.getElementById('pdfTotalPages').textContent = currentTotalPages;
+                document.getElementById('pageRangeEnd').value = currentTotalPages;
+                document.getElementById('pageRangeModal').classList.remove('hidden');
             } catch (error) {
                 console.error('文件处理失败:', error);
                 alert('文件处理失败: ' + error.message);
@@ -483,6 +501,95 @@
         // 关闭详情对话框
         function closeDetailModal() {
             document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        // 关闭页码选择弹框
+        function closePageRangeModal() {
+            document.getElementById('pageRangeModal').classList.add('hidden');
+            currentFile = null;
+            currentTotalPages = 0;
+        }
+        
+        // 确认页码范围并上传
+        async function confirmPageRange() {
+            const startPage = parseInt(document.getElementById('pageRangeStart').value);
+            const endPage = parseInt(document.getElementById('pageRangeEnd').value);
+            
+            if (startPage < 1 || endPage > currentTotalPages || startPage > endPage) {
+                alert('请输入有效的页码范围');
+                return;
+            }
+            
+            try {
+                // 加载原始PDF
+                const arrayBuffer = await currentFile.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                
+                // 创建canvas用于渲染页面
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // 存储选定页面的图像数据
+                const pages = [];
+                
+                // 渲染选定的页面
+                for (let i = startPage; i <= endPage; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({scale: 2.0});
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: viewport
+                    }).promise;
+                    
+                    pages.push(canvas.toDataURL('image/jpeg', 0.8));
+                }
+                
+                // 创建新的PDF
+                const pdfMake = new jsPDF();
+                
+                for (let i = 0; i < pages.length; i++) {
+                    if (i > 0) pdfMake.addPage();
+                    const imgData = pages[i];
+                    pdfMake.addImage(imgData, 'JPEG', 0, 0, 
+                        pdfMake.internal.pageSize.getWidth(), 
+                        pdfMake.internal.pageSize.getHeight());
+                }
+                
+                // 生成新的PDF文件
+                const newPdfBlob = new Blob([pdfMake.output('blob')], { type: 'application/pdf' });
+                const newFile = new File([newPdfBlob], currentFile.name, { type: 'application/pdf' });
+                
+                // 上传文件
+                const formData = new FormData();
+                formData.append('file', newFile);
+                formData.append('startPage', startPage);
+                formData.append('endPage', endPage);
+                formData.append('totalPages', currentTotalPages);
+                
+                const response = await fetch('/nursing/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('上传失败');
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert('上传成功');
+                    closePageRangeModal();
+                    await loadRecentRecords();
+                } else {
+                    throw new Error(result.error || '上传失败');
+                }
+            } catch (error) {
+                console.error('文件处理失败:', error);
+                alert('文件处理失败: ' + error.message);
+            }
         }
     </script>
 </body>
