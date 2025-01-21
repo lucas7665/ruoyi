@@ -1,6 +1,8 @@
 package com.example.ocr.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -8,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.ocr.entity.NursingRecord;
 import com.example.ocr.service.NursingService;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,19 +74,14 @@ public class NursingController {
     }
     
     @PostMapping("/analyze/batch")
-    @ResponseBody
-    public Map<String, Object> analyzeBatch(@RequestBody List<Long> ids) {
+    public ResponseEntity<?> analyzeBatch(@RequestBody List<Long> ids) {
         try {
             nursingService.processAnalysis(ids);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            return response;
+            return ResponseEntity.ok(Collections.singletonMap("success", true));
         } catch (Exception e) {
             log.error("分析处理失败", e);
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", false);
-            response.put("error", e.getMessage());
-            return response;
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", e.getMessage()));
         }
     }
     
@@ -104,19 +102,17 @@ public class NursingController {
     }
     
     @GetMapping("/detail/{id}")
-    @ResponseBody
-    public Map<String, Object> getDetail(@PathVariable Long id) {
-        Map<String, Object> response = new HashMap<>();
+    public ResponseEntity<?> getDetail(@PathVariable Long id) {
         try {
             Map<String, Object> detail = nursingService.getRecordDetail(id);
-            response.put("success", true);
-            response.put("data", detail);
-            return response;
+            if (detail == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(detail);
         } catch (Exception e) {
-            log.error("获取详情失败", e);
-            response.put("success", false);
-            response.put("error", e.getMessage());
-            return response;
+            log.error("获取记录详情失败: id={}, error={}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "获取记录详情失败: " + e.getMessage()));
         }
     }
 } 

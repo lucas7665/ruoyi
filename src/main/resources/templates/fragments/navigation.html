@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <!-- 头部导航 -->
+    <header th:fragment="header" class="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-200 z-50">
+        <div class="flex items-center justify-between h-full px-6">
+            <div class="flex items-center space-x-8">
+                <h1 class="text-xl font-medium">医疗质控系统</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <span class="text-sm text-gray-700" th:text="${session.userName ?: '未登录'}">管理员</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 侧边栏 -->
+    <aside th:fragment="sidebar" class="fixed top-16 left-0 w-60 h-[calc(100vh-4rem)] bg-gray-800 text-white z-40">
+        <nav class="py-4">
+            <div class="px-4 py-2 mb-4">
+                <h2 class="text-sm font-medium text-gray-400">系统导航</h2>
+            </div>
+            <a href="/" class="flex items-center px-4 py-3 hover:bg-primary/90" th:classappend="${#httpServletRequest.requestURI == '/' ? 'bg-primary' : ''}">
+                <i class="fas fa-home w-5 h-5"></i>
+                <span class="ml-3">首页</span>
+            </a>
+            <a href="/upload/list" class="flex items-center px-4 py-3 hover:bg-primary/90" th:classappend="${#httpServletRequest.requestURI == '/upload/list' ? 'bg-primary' : ''}">
+                <i class="fas fa-chart-line w-5 h-5"></i>
+                <span class="ml-3">医疗质控系统</span>
+            </a>
+            <a href="/nursing/manager" class="flex items-center px-4 py-3 hover:bg-primary/90" th:classappend="${#httpServletRequest.requestURI == '/nursing/manager' ? 'bg-primary' : ''}">
+                <i class="fas fa-user-nurse w-5 h-5"></i>
+                <span class="ml-3">护理管理系统</span>
+            </a>
+            <a href="#" class="flex items-center px-4 py-3 text-gray-400 cursor-not-allowed">
+                <i class="fas fa-robot w-5 h-5"></i>
+                <span class="ml-3">医保智能助手</span>
+            </a>
+        </nav>
+    </aside>
+</body>
+</html> 

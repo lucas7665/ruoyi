@@ -18,6 +18,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Slf4j
 @Service
@@ -139,14 +141,16 @@ public class NursingService {
                     }
                     
                     // 执行分析脚本
-                   // String scriptPath = Paths.get(nursingConfig.getPythonPath(), "nursing_analysis.py").toString();
                     String analysisResult = pythonService.executeAnalysisScript(ocrResult.getOcrText());
+                    
+                    // 提取模型回答部分
+                    String modelAnswer = extractModelAnswer(analysisResult);
                     
                     // 保存分析结果
                     NursingAnalysisResult analysisRecord = new NursingAnalysisResult();
                     analysisRecord.setRecordId(record.getId());
-                    analysisRecord.setAnalysisText(ocrResult.getOcrText());
-                    analysisRecord.setModelAnswer(analysisResult);
+                    analysisRecord.setAnalysisText(ocrResult.getOcrText());  // 保存原始OCR文本
+                    analysisRecord.setModelAnswer(modelAnswer);              // 保存模型回答部分
                     analysisRecord.setCreateTime(LocalDateTime.now());
                     analysisResultMapper.insert(analysisRecord);
                     
@@ -161,6 +165,55 @@ public class NursingService {
                 throw new RuntimeException("分析处理失败: " + e.getMessage());
             }
         }
+    }
+
+    private String extractModelAnswer(String output) {
+        // 查找模型回答的开始标记
+        String startMarker = "模型回答: \n";
+        int start = output.indexOf(startMarker);
+        if (start == -1) {
+            log.warn("未找到模型回答标记，返回完整输出");
+            return output;
+        }
+        
+        // 提取模型回答部分（从标记后开始，到下一个时间戳或文件结尾）
+        start += startMarker.length();
+        int end = output.indexOf("\n202", start); // 查找下一个时间戳
+        if (end == -1) {
+            end = output.length();
+        }
+        
+        return output.substring(start, end).trim();
+    }
+
+    private String extractJsonFromOutput(String output) {
+        // 查找包含API响应的JSON对象
+        int jsonStart = output.indexOf("{\"output\":");
+        if (jsonStart == -1) {
+            // 尝试查找最后一个JSON对象
+            jsonStart = output.lastIndexOf("{\"summary\":");
+            if (jsonStart == -1) {
+                throw new RuntimeException("无法在输出中找到JSON数据");
+            }
+        }
+        
+        // 找到JSON对象的结束位置
+        int bracketCount = 1;
+        int jsonEnd = jsonStart + 1;
+        while (bracketCount > 0 && jsonEnd < output.length()) {
+            char c = output.charAt(jsonEnd);
+            if (c == '{') bracketCount++;
+            if (c == '}') bracketCount--;
+            jsonEnd++;
+        }
+        
+        if (bracketCount > 0) {
+            throw new RuntimeException("JSON格式不完整");
+        }
+        
+        String jsonStr = output.substring(jsonStart, jsonEnd);
+        log.debug("提取的JSON: {}", jsonStr);
+        return jsonStr;
     }
 
     public Map<String, Object> getRecordDetail(Long id) {

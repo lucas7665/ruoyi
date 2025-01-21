@@ -7,7 +7,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
-    <link rel="stylesheet" href="/css/style.css">
     <script>
     tailwind.config = {
         theme: {
@@ -16,56 +15,59 @@
                     primary: '#2563eb'
                 }
             }
-        }
+        },
+        plugins: [
+            function({ addBase, addComponents, addUtilities }) {
+                addComponents({
+                    '.btn-primary': {
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        borderRadius: '0.25rem',
+                        '&:hover': {
+                            backgroundColor: 'rgba(37, 99, 235, 0.9)'
+                        },
+                        '&:disabled': {
+                            opacity: '0.5',
+                            cursor: 'not-allowed'
+                        }
+                    },
+                    '.btn-danger': {
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#dc2626',
+                        color: 'white',
+                        borderRadius: '0.25rem',
+                        '&:hover': {
+                            backgroundColor: '#b91c1c'
+                        },
+                        '&:disabled': {
+                            opacity: '0.5',
+                            cursor: 'not-allowed'
+                        }
+                    }
+                })
+            }
+        ]
     }
     </script>
+    <style>
+        .main-content {
+            margin-left: 15rem;
+            margin-top: 4rem;
+            min-height: calc(100vh - 4rem);
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
-    <!-- 头部导航 -->
-    <header class="h-16 bg-white border-b border-gray-200">
-        <div class="flex items-center justify-between h-full px-6">
-            <div class="flex items-center space-x-8">
-                <h1 class="text-xl font-medium">护理管理系统</h1>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                        <i class="fas fa-user text-gray-600"></i>
-                    </div>
-                    <span class="text-sm text-gray-700" th:text="${session.userName ?: '未登录'}">管理员</span>
-                </div>
-            </div>
-        </div>
-    </header>
+    <!-- 引入头部导航 -->
+    <div th:replace="fragments/navigation :: header"></div>
 
     <div class="flex">
-        <!-- 侧边栏 -->
-        <aside class="sidebar bg-gray-800 text-white" style="width: 240px; min-height: calc(100vh - 64px);">
-            <nav class="py-4">
-                <div class="px-4 py-2 mb-4">
-                    <h2 class="text-sm font-medium text-gray-400">系统导航</h2>
-                </div>
-                <a href="/" class="flex items-center px-4 py-3 hover:bg-primary/90">
-                    <i class="fas fa-home w-5 h-5"></i>
-                    <span class="ml-3">首页</span>
-                </a>
-                <a href="/upload/list" class="flex items-center px-4 py-3 hover:bg-primary/90">
-                    <i class="fas fa-chart-line w-5 h-5"></i>
-                    <span class="ml-3">医疗质控系统</span>
-                </a>
-                <a href="/nursing/manager" class="flex items-center px-4 py-3 bg-primary">
-                    <i class="fas fa-user-nurse w-5 h-5"></i>
-                    <span class="ml-3">护理管理系统</span>
-                </a>
-                <a href="#" class="flex items-center px-4 py-3 text-gray-400 cursor-not-allowed">
-                    <i class="fas fa-robot w-5 h-5"></i>
-                    <span class="ml-3">医保智能助手</span>
-                </a>
-            </nav>
-        </aside>
+        <!-- 引入侧边栏 -->
+        <div th:replace="fragments/navigation :: sidebar"></div>
 
         <!-- 主要内容区 -->
-        <main class="main-content p-6">
+        <main class="main-content p-6 w-[calc(100%-15rem)]">
             <div class="mb-6">
                 <h2 class="text-xl font-medium text-gray-800">护理文档分析</h2>
                 <div class="text-sm text-gray-500 mt-1">首页 / 护理管理系统 / 文档分析</div>
@@ -142,6 +144,23 @@
                             <!-- 记录将通过 JavaScript 动态添加 -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- 详情对话框 -->
+            <div id="detailModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+                <div class="relative top-20 mx-auto p-5 border w-4/5 shadow-lg rounded-md bg-white">
+                    <div class="flex justify-between items-center pb-3">
+                        <h3 class="text-lg font-medium">分析结果详情</h3>
+                        <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="mt-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <pre id="analysisDetail" class="whitespace-pre-wrap text-sm text-gray-600"></pre>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -443,54 +462,27 @@
                 if (!response.ok) {
                     throw new Error('获取详情失败');
                 }
-
-                const result = await response.json();
-                if (result.success) {
-                    showDetailModal(result.data);
+                const detail = await response.json();
+                
+                // 显示model_answer内容
+                const analysisDetail = document.getElementById('analysisDetail');
+                if (detail.analysisResult && detail.analysisResult.modelAnswer) {
+                    analysisDetail.textContent = detail.analysisResult.modelAnswer;
                 } else {
-                    throw new Error(result.error || '获取详情失败');
+                    analysisDetail.textContent = '暂无分析结果';
                 }
+                
+                // 显示对话框
+                document.getElementById('detailModal').classList.remove('hidden');
             } catch (error) {
                 console.error('获取详情失败:', error);
                 alert('获取详情失败: ' + error.message);
             }
         }
 
-        // 显示详情模态框
-        function showDetailModal(data) {
-            const modal = document.createElement('div');
-            modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center';
-            modal.innerHTML = `
-                <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-medium">分析详情</h3>
-                        <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="space-y-4">
-                        <div>
-                            <h4 class="font-medium mb-2">文件信息</h4>
-                            <p>文件名：${data.record.fileName}</p>
-                            <p>页面范围：${data.record.startPage} - ${data.record.endPage} / ${data.record.totalPages}</p>
-                            <p>上传时间：${new Date(data.record.uploadTime).toLocaleString()}</p>
-                        </div>
-                        ${data.ocrResult ? `
-                            <div>
-                                <h4 class="font-medium mb-2">OCR结果</h4>
-                                <pre class="whitespace-pre-wrap bg-gray-50 p-3 rounded">${data.ocrResult.ocrText}</pre>
-                            </div>
-                        ` : ''}
-                        ${data.analysisResult ? `
-                            <div>
-                                <h4 class="font-medium mb-2">分析结果</h4>
-                                <pre class="whitespace-pre-wrap bg-gray-50 p-3 rounded">${data.analysisResult.modelAnswer}</pre>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
+        // 关闭详情对话框
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
         }
     </script>
 </body>
