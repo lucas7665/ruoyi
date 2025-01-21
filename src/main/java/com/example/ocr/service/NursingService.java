@@ -18,6 +18,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 @Slf4j
 @Service
@@ -40,7 +42,7 @@ public class NursingService {
     
     public List<NursingRecord> getRecentRecords(int limit) {
         log.info("获取最近{}条记录", limit);
-        List<NursingRecord> records = nursingRecordMapper.selectRecentRecords(limit);
+        List<NursingRecord> records = nursingRecordMapper.selectRecentRecordsWithAnalysis(limit);
         log.info("查询到{}条记录", records.size());
         return records;
     }
@@ -144,11 +146,15 @@ public class NursingService {
                     // 提取模型回答部分
                     String modelAnswer = extractModelAnswer(analysisResult);
                     
+                    // 检查异常项
+                    int abnormalCount = checkAbnormalItems(modelAnswer);
+                    
                     // 保存分析结果
                     NursingAnalysisResult analysisRecord = new NursingAnalysisResult();
                     analysisRecord.setRecordId(record.getId());
-                    analysisRecord.setAnalysisText(ocrResult.getOcrText());  // 保存原始OCR文本
-                    analysisRecord.setModelAnswer(modelAnswer);              // 保存模型回答部分
+                    analysisRecord.setAnalysisText(ocrResult.getOcrText());
+                    analysisRecord.setModelAnswer(modelAnswer);
+                    analysisRecord.setAbnormalCount(abnormalCount);
                     analysisRecord.setCreateTime(LocalDateTime.now());
                     analysisResultMapper.insert(analysisRecord);
                     
@@ -182,6 +188,17 @@ public class NursingService {
         }
         
         return output.substring(start, end).trim();
+    }
+
+    private int checkAbnormalItems(String modelAnswer) {
+        int abnormalCount = 0;
+        // 检查是否包含未签名相关的内容
+        Pattern pattern = Pattern.compile("未签名|缺少签名|没有签名|签名缺失");
+        Matcher matcher = pattern.matcher(modelAnswer);
+        while (matcher.find()) {
+            abnormalCount++;
+        }
+        return abnormalCount;
     }
 
     public Map<String, Object> getRecordDetail(Long id) {

@@ -13,6 +13,14 @@ public interface NursingRecordMapper {
     @Select("SELECT * FROM nursing_record WHERE status != -1 ORDER BY upload_time DESC LIMIT #{limit}")
     List<NursingRecord> selectRecentRecords(int limit);
     
+    @Select("SELECT r.*, a.abnormal_count " +
+            "FROM nursing_record r " +
+            "LEFT JOIN nursing_analysis_result a ON r.id = a.record_id " +
+            "WHERE r.status != -1 " +
+            "ORDER BY r.create_time DESC " +
+            "LIMIT #{limit}")
+    List<NursingRecord> selectRecentRecordsWithAnalysis(@Param("limit") int limit);
+    
     @Insert("INSERT INTO nursing_record (file_name, stored_file_name, file_size, file_type, " +
             "start_page, end_page, total_pages, upload_time, status, create_time, update_time) " +
             "VALUES (#{fileName}, #{storedFileName}, #{fileSize}, #{fileType}, " +

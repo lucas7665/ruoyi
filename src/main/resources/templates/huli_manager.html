@@ -138,6 +138,9 @@
                                     状态
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    异常数
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     操作
                                 </th>
                             </tr>
@@ -418,6 +421,15 @@
                         ${getStatusText(record.status)}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
+                        ${record.status === 2 ? 
+                            `<span class="cursor-pointer ${record.analysisResult?.abnormalCount > 0 ? 'text-red-600 font-medium' : ''}" 
+                            onclick="showAbnormalDetails(${record.id}, ${record.analysisResult?.abnormalCount || 0})">
+                                ${record.analysisResult?.abnormalCount || 0}
+                            </span>` : 
+                            '-'
+                        }
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
                         <button onclick="viewDetail(${record.id})" class="text-primary hover:text-primary-dark">
                             查看详情
                         </button>
@@ -482,15 +494,22 @@
                 }
                 const detail = await response.json();
                 
-                // 显示model_answer内容
                 const analysisDetail = document.getElementById('analysisDetail');
                 if (detail.analysisResult && detail.analysisResult.modelAnswer) {
-                    analysisDetail.textContent = detail.analysisResult.modelAnswer;
+                    // 高亮显示异常项
+                    let highlightedText = detail.analysisResult.modelAnswer;
+                    const keywords = ['未签名', '缺少签名', '没有签名', '签名缺失'];
+                    keywords.forEach(keyword => {
+                        highlightedText = highlightedText.replace(
+                            new RegExp(keyword, 'g'),
+                            `<span class="text-red-600 font-medium">${keyword}</span>`
+                        );
+                    });
+                    analysisDetail.innerHTML = highlightedText;
                 } else {
                     analysisDetail.textContent = '暂无分析结果';
                 }
                 
-                // 显示对话框
                 document.getElementById('detailModal').classList.remove('hidden');
             } catch (error) {
                 console.error('获取详情失败:', error);
@@ -589,6 +608,13 @@
             } catch (error) {
                 console.error('文件处理失败:', error);
                 alert('文件处理失败: ' + error.message);
+            }
+        }
+
+        // 显示异常详情
+        function showAbnormalDetails(id, count) {
+            if (count > 0) {
+                alert('存在异常项目：医师未签名异常，请及时处理。');
             }
         }
     </script>
