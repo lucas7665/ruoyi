@@ -118,4 +118,10 @@ uploads/
 
 # Config
 application-*.properties
-!application.properties 
+!application.properties
+
+# 上传文件
+temp/
+
+# 配置文件
+nursing_config.json 

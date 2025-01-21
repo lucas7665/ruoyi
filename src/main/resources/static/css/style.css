@@ -1,0 +1,55 @@
+/* 通用样式 */
+.btn-primary {
+    padding: 0.5rem 1rem;
+    background-color: #2563eb;
+    color: white;
+    border-radius: 0.25rem;
+}
+
+.btn-primary:hover {
+    background-color: rgba(37, 99, 235, 0.9);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+}
+
+.btn-danger {
+    padding: 0.5rem 1rem;
+    background-color: #dc2626;
+    color: white;
+    border-radius: 0.25rem;
+}
+
+.btn-danger:hover {
+    background-color: #b91c1c;
+}
+
+.btn-danger:disabled {
+    opacity: 0.5;
+}
+
+/* 表格样式 */
+.table-row-hover:hover {
+    background-color: #f9fafb;
+}
+
+/* 文件上传区域 */
+.upload-area {
+    border: 2px dashed #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+}
+
+.upload-area:hover {
+    border-color: #2563eb;
+}
+
+/* 状态标签 */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+} 

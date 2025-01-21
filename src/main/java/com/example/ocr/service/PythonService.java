@@ -10,9 +10,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -32,79 +32,19 @@ public class PythonService {
         return Paths.get(getProjectPath(), "venv", "bin", "python3").toString();
     }
     
-    public String executeOcrScript(String fileName) {
-        try {
-            log.info("执行OCR脚本, 文件路径: {}", fileName);
-            
-            String projectPath = getProjectPath();
-            String fullScriptPath = Paths.get(projectPath, scriptPath, "ocr_service.py").toString();
-            String fullFilePath = Paths.get(projectPath, uploadPath, fileName).toString();
-            
-            log.info("脚本路径: {}, 文件路径: {}", fullScriptPath, fullFilePath);
-            
-            ProcessBuilder processBuilder = new ProcessBuilder(
-                getPythonPath(),
-                fullScriptPath,
-                fullFilePath
-            );
-            
-            Process process = processBuilder.start();
-            
-            // 读取输出
-            StringBuilder output = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
-            
-            // 读取错误
-            StringBuilder error = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    error.append(line).append("\n");
-                }
-            }
-            
-            int exitCode = process.waitFor();
-            log.info("OCR脚本执行完成, 退出码: {}", exitCode);
-            
-            if (exitCode != 0) {
-                throw new RuntimeException("OCR处理失败: " + error);
-            }
-            
-            // 从API响应中提取ParsedText
-            String outputStr = output.toString();
-            if (outputStr.contains("API Response:")) {
-                int apiIndex = outputStr.indexOf("API Response:");
-                String jsonStr = outputStr.substring(apiIndex + "API Response:".length()).trim();
-                
-                // 将单引号替换为双引号以符合JSON格式
-                jsonStr = jsonStr.replace("'", "\"")
-                        .replace("False", "false")
-                        .replace("True", "true");
-                
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode rootNode = mapper.readTree(jsonStr);
-                JsonNode parsedResults = rootNode.path("ParsedResults");
-                
-                if (!parsedResults.isEmpty()) {
-                    // 合并所有页面的文本
-                    StringBuilder fullText = new StringBuilder();
-                    for (JsonNode result : parsedResults) {
-                        fullText.append(result.path("ParsedText").asText()).append("\n");
-                    }
-                    return fullText.toString().trim();
-                }
-            }
-            throw new RuntimeException("无法从OCR结果中提取文本内容");
-            
-        } catch (IOException | InterruptedException e) {
-            log.error("执行OCR脚本失败", e);
-            throw new RuntimeException("OCR处理失败", e);
-        }
+    public String executeOcrScript(String fileName) throws IOException {
+        return executeOcrScript(fileName, null, null);
+    }
+    
+    public String executeOcrScript(String filePath, Integer startPage, Integer endPage) throws IOException {
+        List<String> command = new ArrayList<>();
+        command.add("python");
+        command.add(Paths.get(scriptPath, "nursing_ocr.py").toString());
+        command.add(filePath);
+        command.add(String.valueOf(startPage));
+        command.add(String.valueOf(endPage));
+        
+        return executePythonScript(command);
     }
     
     public String executeAnalysisScript(String text) {
@@ -152,5 +92,23 @@ public class PythonService {
             log.error("执行分析脚本失败", e);
             throw new RuntimeException("分析处理失败", e);
         }
+    }
+    
+    private String executePythonScript(List<String> command) throws IOException {
+        log.info("执行Python命令: {}", String.join(" ", command));
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+        
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+                log.debug("Python输出: {}", line);
+            }
+        }
+        
+        return output.toString().trim();
     }
 }
