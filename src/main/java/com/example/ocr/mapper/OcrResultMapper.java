@@ -2,6 +2,7 @@ package com.example.ocr.mapper;
 
 import com.example.ocr.entity.OcrResult;
 import org.apache.ibatis.annotations.*;
+import java.util.List;
 
 @Mapper
 public interface OcrResultMapper {
@@ -11,7 +12,7 @@ public interface OcrResultMapper {
     void insert(OcrResult result);
     
     @Select("SELECT * FROM ocr_result WHERE record_id = #{recordId}")
-    OcrResult selectByRecordId(Long recordId);
+    List<OcrResult> selectListByRecordId(Long recordId);
     
     @Delete("DELETE FROM ocr_result WHERE record_id = #{recordId}")
     void deleteByRecordId(Long recordId);

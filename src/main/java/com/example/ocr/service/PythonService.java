@@ -4,6 +4,8 @@ package com.example.ocr.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.example.ocr.config.FileStorageConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -24,6 +26,9 @@ public class PythonService {
     @Value("${python.script.path}")
     private String scriptPath;
     
+    @Autowired
+    private FileStorageConfig fileStorageConfig;
+    
     private String getProjectPath() {
         return System.getProperty("user.dir");
     }
@@ -36,15 +41,37 @@ public class PythonService {
         return executeOcrScript(fileName, null, null);
     }
     
-    public String executeOcrScript(String filePath, Integer startPage, Integer endPage) throws IOException {
+    public String executeOcrScript(String fileName, Integer startPage, Integer endPage) throws IOException {
         List<String> command = new ArrayList<>();
         command.add("python");
-        command.add(Paths.get(scriptPath, "nursing_ocr.py").toString());
-        command.add(filePath);
-        command.add(String.valueOf(startPage));
-        command.add(String.valueOf(endPage));
+        command.add("src/main/resources/python/nursing_ocr.py");
+        command.add(Paths.get(fileStorageConfig.getPath(), fileName).toString());
+        command.add(startPage == null ? "null" : startPage.toString());
+        command.add(endPage == null ? "null" : endPage.toString());
         
-        return executePythonScript(command);
+        log.info("开始执行OCR命令: {}", String.join(" ", command));
+        
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.redirectErrorStream(true);  // 合并错误流
+        log.info("工作目录: {}", processBuilder.directory());
+        
+        Process process = processBuilder.start();
+        log.info("进程已启动，开始读取输出");
+        
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(process.getInputStream()))) {
+            StringBuilder output = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                log.info("Python输出: {}", line);
+                output.append(line).append("\n");
+            }
+            log.info("Python脚本执行完成");
+            return output.toString();
+        } catch (Exception e) {
+            log.error("执行Python脚本时发生错误: {}", e.getMessage(), e);
+            throw new RuntimeException("OCR处理失败: " + e.getMessage());
+        }
     }
     
     public String executeAnalysisScript(String text) {

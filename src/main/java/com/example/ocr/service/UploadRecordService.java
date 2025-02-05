@@ -91,28 +91,19 @@ public class UploadRecordService {
         for (Long id : ids) {
             try {
                 UploadRecord record = uploadRecordMapper.selectById(id);
-                if (record == null || record.getStatus() != 0) {
-                    continue;
-                }
-                
-                // 获取文件的完整路径
-                File[] files = new File(fileStorageConfig.getPath()).listFiles((dir, name) -> 
-                    name.endsWith("_" + record.getFileName()));
-                
-                if (files == null || files.length == 0) {
-                    log.error("找不到文件: {}", record.getFileName());
-                    continue;
-                }
-                
-                // 使用实际的文件名（包含UUID前缀）
-                String actualFileName = files[0].getName();
-                log.info("找到文件: {}", actualFileName);
-                
-                // 执行OCR
-                String ocrResult = pythonService.executeOcrScript(actualFileName);
-                log.info("OCR结果预览: {}", ocrResult.substring(0, Math.min(200, ocrResult.length())));
-                
-                if (ocrResult != null && !ocrResult.startsWith("Error:")) {
+                if (record != null) {
+                    File[] files = new File(fileStorageConfig.getPath()).listFiles((dir, name) -> 
+                        name.endsWith("_" + record.getFileName()));
+                    
+                    if (files == null || files.length == 0) {
+                        throw new RuntimeException("找不到文件: " + record.getFileName());
+                    }
+                    
+                    String actualFileName = files[0].getName();
+                    log.info("找到文件: {}", actualFileName);
+                    
+                    String ocrResult = pythonService.executeOcrScript(actualFileName, null, null);
+                    
                     // 保存OCR结果
                     OcrResult ocr = new OcrResult();
                     ocr.setRecordId(id);
@@ -126,11 +117,9 @@ public class UploadRecordService {
                     uploadRecordMapper.updateById(record);
                     
                     log.info("OCR处理完成, ID: {}", id);
-                } else {
-                    log.error("OCR处理失败: {}", ocrResult);
                 }
             } catch (Exception e) {
-                log.error("OCR处理失败, ID: {}", id, e);
+                log.error("OCR处理失败: {}", e.getMessage(), e);
             }
         }
     }
@@ -145,15 +134,17 @@ public class UploadRecordService {
                 }
                 
                 // 获取OCR结果
-                OcrResult ocr = ocrResultMapper.selectByRecordId(id);
-                if (ocr == null || ocr.getOcrText() == null) {
+                List<OcrResult> ocrResults = ocrResultMapper.selectListByRecordId(id);
+                OcrResult ocrResult = ocrResults.isEmpty() ? null : ocrResults.get(ocrResults.size() - 1);
+                
+                if (ocrResult == null || ocrResult.getOcrText() == null) {
                     log.error("找不到OCR结果, ID: {}", id);
                     continue;
                 }
                 
                 // 解析OCR结果
                 try {
-                    String ocrText = ocr.getOcrText();
+                    String ocrText = ocrResult.getOcrText();
                     // OCR文本已经是提取好的文本内容，直接使用
                     if (ocrText.trim().isEmpty()) {
                         log.error("OCR文本内容为空, ID: {}", id);
@@ -233,7 +224,8 @@ public class UploadRecordService {
         detail.put("record", record);
         
         // 获取OCR结果
-        OcrResult ocrResult = ocrResultMapper.selectByRecordId(id);
+        List<OcrResult> ocrResults = ocrResultMapper.selectListByRecordId(id);
+        OcrResult ocrResult = ocrResults.isEmpty() ? null : ocrResults.get(ocrResults.size() - 1);
         if (ocrResult != null) {
             detail.put("ocrResult", ocrResult);
         }
