@@ -79,15 +79,16 @@ public class PythonService {
         }
     }
     
-    public String executeAnalysisScript(String text) {
+    public String executeAnalysisScript(String text, String promptPath) {
         try {
             String projectPath = getProjectPath();
             String fullScriptPath = Paths.get(projectPath, scriptPath, "analysis.py").toString();
-            log.info("执行分析脚本: {}", fullScriptPath);
+            log.info("执行分析脚本: script={}, prompt={}", fullScriptPath, promptPath);
             
             ProcessBuilder processBuilder = new ProcessBuilder(
                 getPythonPath(),
-                fullScriptPath
+                fullScriptPath,
+                promptPath
             );
             
             processBuilder.redirectErrorStream(true);

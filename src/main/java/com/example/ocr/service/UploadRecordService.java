@@ -154,7 +154,8 @@ public class UploadRecordService {
                     }
                     
                     // 执行分析
-                    String analysisResult = pythonService.executeAnalysisScript(ocrText);
+                    String analysisResult = pythonService.executeAnalysisScript(ocrText, 
+                        "src/main/resources/python/prom.txt");
                     
                     // 从分析结果中提取模型回答
                     String modelAnswer = "";

@@ -135,15 +135,18 @@ public class NursingService {
                 NursingRecord record = nursingRecordMapper.selectById(id);
                 if (record != null && record.getStatus() == 1) {
                     // 获取OCR结果
-                    NursingOcrResult ocrResult = ocrResultMapper.selectByRecordId(record.getId());
+                    NursingOcrResult ocrResult = ocrResultMapper.selectByRecordId(id);
                     if (ocrResult == null || ocrResult.getOcrText() == null) {
-                        throw new RuntimeException("找不到OCR结果");
+                        log.error("找不到OCR结果: id={}", id);
+                        continue;
                     }
                     
-                    // 执行分析脚本
-                    String analysisResult = pythonService.executeAnalysisScript(ocrResult.getOcrText());
+                    // 使用专门的护理提示词文件
+                    String promptPath = "src/main/resources/python/nursing_prompt.txt";
+                    String analysisResult = pythonService.executeAnalysisScript(
+                        ocrResult.getOcrText(), promptPath);
                     
-                    // 提取模型回答部分
+                    // 解析分析结果
                     String modelAnswer = extractModelAnswer(analysisResult);
                     
                     // 检查异常项
