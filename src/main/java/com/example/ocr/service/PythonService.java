@@ -120,22 +120,4 @@ public class PythonService {
             throw new RuntimeException("分析处理失败", e);
         }
     }
-    
-    private String executePythonScript(List<String> command) throws IOException {
-        log.info("执行Python命令: {}", String.join(" ", command));
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);
-        Process process = processBuilder.start();
-        
-        StringBuilder output = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-                log.debug("Python输出: {}", line);
-            }
-        }
-        
-        return output.toString().trim();
-    }
 }
