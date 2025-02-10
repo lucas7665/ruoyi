@@ -102,7 +102,9 @@ public class UploadRecordService {
                     String actualFileName = files[0].getName();
                     log.info("找到文件: {}", actualFileName);
                     
-                    String ocrResult = pythonService.executeOcrScript(actualFileName, null, null);
+                    String filePath = Paths.get(fileStorageConfig.getPath(), actualFileName).toString();
+                    log.info("完整文件路径: {}", filePath);
+                    String ocrResult = pythonService.executeOcrScript(filePath, null, null);
                     
                     // 保存OCR结果
                     OcrResult ocr = new OcrResult();

@@ -4,8 +4,6 @@ package com.example.ocr.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.example.ocr.config.FileStorageConfig;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,6 +13,7 @@ import java.io.OutputStreamWriter;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.io.File;
 
 @Slf4j
 @Service
@@ -25,9 +24,6 @@ public class PythonService {
     
     @Value("${python.script.path}")
     private String scriptPath;
-    
-    @Autowired
-    private FileStorageConfig fileStorageConfig;
     
     private String getProjectPath() {
         return System.getProperty("user.dir");
@@ -42,21 +38,30 @@ public class PythonService {
     }
     
     public String executeOcrScript(String fileName, Integer startPage, Integer endPage) throws IOException {
+        log.info("准备执行OCR脚本，文件路径: {}", fileName);
+        File file = new File(fileName);
+        if (!file.exists()) {
+            log.error("文件不存在: {}", fileName);
+            throw new RuntimeException("文件不存在: " + fileName);
+        }
+        log.info("文件存在，大小: {} bytes", file.length());
+
         List<String> command = new ArrayList<>();
         command.add("python");
         command.add("src/main/resources/python/nursing_ocr.py");
-        command.add(Paths.get(fileStorageConfig.getPath(), fileName).toString());
+        command.add(fileName);
         command.add(startPage == null ? "null" : startPage.toString());
         command.add(endPage == null ? "null" : endPage.toString());
         
-        log.info("开始执行OCR命令: {}", String.join(" ", command));
+        log.info("执行OCR命令: command={}, workDir={}", 
+            String.join(" ", command), System.getProperty("user.dir"));
         
         ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectErrorStream(true);  // 合并错误流
-        log.info("工作目录: {}", processBuilder.directory());
+        processBuilder.directory(new File(System.getProperty("user.dir")));
+        processBuilder.redirectErrorStream(true);
         
         Process process = processBuilder.start();
-        log.info("进程已启动，开始读取输出");
+        log.info("Python进程已启动");
         
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream()))) {
